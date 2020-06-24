@@ -119,6 +119,27 @@ static int hit_view_proc(struct menu_item *item,
   return 0;
 }
 
+static int water_view_proc(struct menu_item *item,
+                         enum menu_callback_reason reason,
+                         void *data)
+{
+  if (reason == MENU_CALLBACK_SWITCH_ON) {
+    if (gz.water_view_state == WATERVIEW_INACTIVE)
+      gz.water_view_state = WATERVIEW_START;
+  }
+  else if (reason == MENU_CALLBACK_SWITCH_OFF) {
+    if (gz.water_view_state != WATERVIEW_INACTIVE)
+      gz.water_view_state = WATERVIEW_BEGIN_STOP;
+  }
+  else if (reason == MENU_CALLBACK_THINK) {
+    _Bool state = gz.water_view_state == WATERVIEW_START ||
+                  gz.water_view_state == WATERVIEW_ACTIVE;
+    if (menu_checkbox_get(item) != state)
+      menu_checkbox_set(item, state);
+  }
+  return 0;
+}
+
 static int col_view_mode_proc(struct menu_item *item,
                               enum menu_callback_reason reason,
                               void *data)
@@ -290,6 +311,32 @@ static int hit_view_shade_proc(struct menu_item *item,
     settings->bits.hit_view_shade = 0;
   else if (reason == MENU_CALLBACK_THINK)
     menu_checkbox_set(item, settings->bits.hit_view_shade);
+  return 0;
+}
+
+static int water_view_xlu_proc(struct menu_item *item,
+                             enum menu_callback_reason reason,
+                             void *data)
+{
+  if (reason == MENU_CALLBACK_SWITCH_ON)
+    settings->bits.water_view_xlu = 1;
+  else if (reason == MENU_CALLBACK_SWITCH_OFF)
+    settings->bits.water_view_xlu = 0;
+  else if (reason == MENU_CALLBACK_THINK)
+    menu_checkbox_set(item, settings->bits.water_view_xlu);
+  return 0;
+}
+
+static int water_view_shade_proc(struct menu_item *item,
+                               enum menu_callback_reason reason,
+                               void *data)
+{
+  if (reason == MENU_CALLBACK_SWITCH_ON)
+    settings->bits.water_view_shade = 1;
+  else if (reason == MENU_CALLBACK_SWITCH_OFF)
+    settings->bits.water_view_shade = 0;
+  else if (reason == MENU_CALLBACK_THINK)
+    menu_checkbox_set(item, settings->bits.water_view_shade);
   return 0;
 }
 
@@ -515,6 +562,14 @@ struct menu *gz_scene_menu(void)
   menu_add_checkbox(&collision, 16, 12, hit_view_xlu_proc, NULL);
   menu_add_static(&collision, 2, 13, "shaded", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 13, hit_view_shade_proc, NULL);
+  /* water view controls */
+  menu_add_static(&collision, 0, 14, "show waterboxes", 0xC0C0C0);
+  menu_add_checkbox(&collision, 16, 14, water_view_proc, NULL);
+  menu_add_static(&collision, 2, 15, "translucent", 0xC0C0C0);
+  menu_add_checkbox(&collision, 16, 15, water_view_xlu_proc, NULL);
+  menu_add_static(&collision, 2, 16, "shaded", 0xC0C0C0);
+  menu_add_checkbox(&collision, 16, 16, water_view_shade_proc, NULL);
+
 
   /* populate camera menu */
   camera.selector = menu_add_submenu(&camera, 0, 0, NULL, "return");
