@@ -89,6 +89,7 @@ enum commands
   COMMAND_COLVIEW,
   COMMAND_HITVIEW,
   COMMAND_WATERVIEW,
+  COMMAND_PATHVIEW,
   COMMAND_PREVROOM,
   COMMAND_NEXTROOM,
   COMMAND_RESETLAG,
@@ -141,6 +142,9 @@ struct settings_bits
   uint32_t hit_view_oc     : 1;
   uint32_t water_view_xlu   : 1;
   uint32_t water_view_shade : 1;
+  uint32_t path_view_xlu    : 1;
+  uint32_t path_view_points : 1;
+  uint32_t path_view_lines  : 1;
   uint32_t watches_visible  : 1;
 };
 

@@ -64,6 +64,9 @@ void settings_load_default(void)
   d->bits.col_view_upd = 1;
   d->bits.hit_view_xlu = 1;
   d->bits.hit_view_shade = 1;
+  d->bits.path_view_xlu = 1;
+  d->bits.path_view_points = 1;
+  d->bits.path_view_lines = 1;
   d->bits.hit_view_at = 0;
   d->bits.hit_view_ac = 0;
   d->bits.hit_view_oc = 0;
@@ -122,6 +125,7 @@ void settings_load_default(void)
   d->binds[COMMAND_PLAYMACRO] = bind_make(0);
   d->binds[COMMAND_COLVIEW] = bind_make(0);
   d->binds[COMMAND_HITVIEW] = bind_make(0);
+  d->binds[COMMAND_PATHVIEW] = bind_make(0);
   d->binds[COMMAND_WATERVIEW] = bind_make(0);
   d->binds[COMMAND_PREVROOM] = bind_make(2, BUTTON_R, BUTTON_D_DOWN);
   d->binds[COMMAND_NEXTROOM] = bind_make(2, BUTTON_R, BUTTON_D_UP);
