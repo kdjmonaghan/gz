@@ -2015,6 +2015,32 @@ typedef struct
                                               /* 0x0008 */
 } z64_afx_cmd_t;
 
+typedef struct {
+    /* 0x0000 */ uint32_t    magic; // string literal "VIEW" / 0x56494557
+    /* 0x0004 */ z64_gfx_t*  gfx;                      /* 0x0000 */
+    /* 0x0008 */ float       viewport[4]; // I think this is related to the window edges?
+    /* 0x0018 */ float       fovy;  // vertical field of view in degrees
+    /* 0x001C */ float       zNear; // distance to near clipping plane
+    /* 0x0020 */ float       zFar;  // distance to far clipping plane
+    /* 0x0024 */ float       scale; // scale for matrix elements
+    /* 0x0028 */ z64_xyzf_t  eye;
+    /* 0x0034 */ z64_xyzf_t  at;
+    /* 0x0040 */ z64_xyzf_t  up;
+    /* 0x0050 */ uint8_t     vp[16]; // I don't know what this is but it's 16 bytes long
+    /* 0x0060 */ Mtx         projection;
+    /* 0x00A0 */ Mtx         viewing;
+    /* 0x00E0 */ Mtx*        projectionPtr;
+    /* 0x00E4 */ Mtx*        viewingPtr;
+    /* 0x00E8 */ z64_xyzf_t  unk_E8;
+    /* 0x00F4 */ z64_xyzf_t  unk_F4;
+    /* 0x0100 */ float       unk_100;
+    /* 0x0104 */ z64_xyzf_t  unk_104;
+    /* 0x0110 */ z64_xyzf_t  unk_110;
+    /* 0x011C */ uint16_t    normal; // used to normalize the projection matrix
+    /* 0x0120 */ uint32_t    flags;
+    /* 0x0124 */ uint32_t    unk_124;
+} z64_view_t; // size = 0x128
+
 /* file indices */
 #if Z64_VERSION == Z64_OOT10 || \
     Z64_VERSION == Z64_OOT11 || \
@@ -2249,6 +2275,7 @@ z64_extern  uint32_t              z64_afx_counter;
 z64_extern  uint8_t               z64_afx_cmd_write_pos;
 z64_extern  uint8_t               z64_afx_cmd_read_pos;
 z64_extern  z64_afx_cmd_t         z64_afx_cmd_buf[0x100];
+z64_extern  z64_view_t            z64_view;
 z64_extern  char                  z64_zimg[];
 z64_extern  char                  z64_disp[];
 z64_extern  z64_ctxt_t            z64_ctxt;
