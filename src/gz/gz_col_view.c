@@ -1059,6 +1059,296 @@ void gz_hit_view(void)
   }
 }
 
+static void vector_rotate(z64_xyzf_t* b, z64_xyzf_t* a, MtxF* mf)
+{
+  // b = a * mf
+  b->x = (a->x * mf->xx) + (a->y * mf->yx) + (a->z * mf->zx);
+  b->y = (a->x * mf->xy) + (a->y * mf->yy) + (a->z * mf->zy);
+  b->z = (a->x * mf->xz) + (a->y * mf->yz) + (a->z * mf->zz);
+}
+
+static void vector_translate(z64_xyzf_t* b, float x, float y, float z)
+{
+  b->x = b->x + x;
+  b->y = b->y + y;
+  b->z = b->z + z;
+}
+
+static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
+{
+  MtxF mf_persp;
+  MtxF mf_look;
+
+  z64_xyzf_t A[4];
+  z64_xyzf_t B[4];
+  z64_xyzf_t C[4];
+
+  float scale;
+
+  // Not sure if this wiivc cull logic is needed or if the hook deals with it but just to be safe:
+  if (settings->bits.wiivc_cam)
+    scale = 1.f;
+  else
+	scale = z64_view.scale;
+
+  guPerspectiveF(&mf_persp, NULL, z64_view.fovy * M_PI / 180.f, 4.0f/3.0f, z64_view.zNear, z64_view.zFar, scale);
+  guLookAtF(&mf_look,
+               z64_view.eye.x, z64_view.eye.y, z64_view.eye.z,
+               z64_view.at.x,  z64_view.at.y,  z64_view.at.z,
+               z64_view.up.x,  z64_view.up.y,  z64_view.up.z);
+  float temp;
+  temp = mf_look.xy;
+  mf_look.xy = mf_look.yx;
+  mf_look.yx = temp;
+
+  temp = mf_look.xz;
+  mf_look.xz = mf_look.zx;
+  mf_look.zx = temp;
+
+  temp = mf_look.yz;
+  mf_look.yz = mf_look.zy;
+  mf_look.zy = temp;
+
+  float x1;
+  float x2;
+  float y1;
+  float y2;
+  float z;
+
+  float F4 = gz.selected_actor.ptr->unk_0xF4;
+  float F8 = gz.selected_actor.ptr->unk_0xF8;
+  float FC = gz.selected_actor.ptr->unk_0xFC;
+
+  // Front face vertices
+  z = (F4+F8-mf_persp.wz)/mf_persp.zz;
+  y1 = (z - FC)/mf_persp.yy;
+  y2 = (-z + F8)/mf_persp.yy;
+  x1 = (-z + F8)/mf_persp.xx;
+  x2 = -x1;
+
+  A[0].x = x1;
+  A[0].y = y1;
+  A[0].z = z;
+
+  A[1].x = x1;
+  A[1].y = y2;
+  A[1].z = z;
+
+  A[2].x = x2;
+  A[2].y = y2;
+  A[2].z = z;
+
+  A[3].x = x2;
+  A[3].y = y1;
+  A[3].z = z;
+
+  // middle vertices
+  z = mf_persp.zw;
+  y1 = (mf_persp.zw - FC)/mf_persp.yy;
+  y2 = (-mf_persp.zw + F8)/mf_persp.yy;
+  x1 = (-mf_persp.zw + F8)/mf_persp.xx;
+  x2 = -x1;
+
+  B[0].x = x1;
+  B[0].y = y1;
+  B[0].z = z;
+
+  B[1].x = x1;
+  B[1].y = y2;
+  B[1].z = z;
+
+  B[2].x = x2;
+  B[2].y = y2;
+  B[2].z = z;
+
+  B[3].x = x2;
+  B[3].y = y1;
+  B[3].z = z;
+
+  //tail face vertices
+  z = -(F8 + mf_persp.wz)/mf_persp.zz;
+
+  C[0].x = x1;
+  C[0].y = y1;
+  C[0].z = z;
+
+  C[1].x = x1;
+  C[1].y = y2;
+  C[1].z = z;
+
+  C[2].x = x2;
+  C[2].y = y2;
+  C[2].z = z;
+
+  C[3].x = x2;
+  C[3].y = y1;
+  C[3].z = z;
+
+  // Now rotate them
+  vector_rotate(&Av[0], &A[0], &mf_look);
+  vector_rotate(&Av[1], &A[1], &mf_look);
+  vector_rotate(&Av[2], &A[2], &mf_look);
+  vector_rotate(&Av[3], &A[3], &mf_look);
+
+  vector_rotate(&Bv[0], &B[0], &mf_look);
+  vector_rotate(&Bv[1], &B[1], &mf_look);
+  vector_rotate(&Bv[2], &B[2], &mf_look);
+  vector_rotate(&Bv[3], &B[3], &mf_look);
+
+  vector_rotate(&Cv[0], &C[0], &mf_look);
+  vector_rotate(&Cv[1], &C[1], &mf_look);
+  vector_rotate(&Cv[2], &C[2], &mf_look);
+  vector_rotate(&Cv[3], &C[3], &mf_look);
+
+  // Now translate them
+  vector_translate(&Av[0], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Av[1], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Av[2], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Av[3], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+
+  vector_translate(&Bv[0], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Bv[1], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Bv[2], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Bv[3], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+
+  vector_translate(&Cv[0], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Cv[1], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Cv[2], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vector_translate(&Cv[3], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+}
+
+void gz_cull_view(void)
+{
+  const int cull_gfx_cap = 0x800;
+
+  static Gfx *cull_gfx_buf[2];
+  static int  cull_gfx_idx = 0;
+  static z64_xyzf_t A[4];
+  static z64_xyzf_t B[4];
+  static z64_xyzf_t C[4];
+
+  _Bool enable = zu_in_game() && z64_game.pause_ctxt.state == 0;
+
+  if (enable && gz.cull_view_state == CULLVIEW_START) {
+    cull_gfx_buf[0] = malloc(sizeof(*cull_gfx_buf[0]) * cull_gfx_cap);
+    cull_gfx_buf[1] = malloc(sizeof(*cull_gfx_buf[1]) * cull_gfx_cap);
+
+    gz.cull_view_state = CULLVIEW_ACTIVE;
+  }
+  if (enable && gz.cull_view_state == CULLVIEW_ACTIVE) {
+	// If actor has no type, stop
+	if (gz.selected_actor.type == -1)
+    {
+	  gz.cull_view_state = CULLVIEW_BEGIN_STOP;
+	  return;
+	}
+	// Now look through actor type list
+	_Bool actor_found = 0;
+	uint16_t n_entries = z64_game.actor_list[gz.selected_actor.type].length;
+    z64_actor_t *actor = z64_game.actor_list[gz.selected_actor.type].first;
+
+	// If first actor is not the same mem address and ID, loop through until you find it.
+	if (actor != gz.selected_actor.ptr || actor->actor_id != gz.selected_actor.id)
+	{
+	  for (int i = 0; i < n_entries-1; ++i)
+	  {
+	    actor = actor->next;
+		if (actor == gz.selected_actor.ptr && actor->actor_id == gz.selected_actor.id)
+        {
+          actor_found = 1;
+	      break;
+	    }
+	  }
+    }
+	else
+	  actor_found = 1;
+
+	//Check if we found it and if not, turn off cull view
+	if (!actor_found)
+	{
+	  gz.selected_actor.ptr = NULL;
+	  gz.selected_actor.id = -1;
+	  gz.selected_actor.type = -1;
+	  gz.cull_view_state = CULLVIEW_BEGIN_STOP;
+	  return;
+	}
+
+	Gfx **p_gfx_p;
+    p_gfx_p = &z64_ctxt.gfx->poly_xlu.p;
+
+    Gfx *cull_gfx = cull_gfx_buf[cull_gfx_idx];
+    Gfx *cull_gfx_p = cull_gfx;
+    Gfx *cull_gfx_d = cull_gfx + cull_gfx_cap;
+    cull_gfx_idx = (cull_gfx_idx + 1) % 2;
+
+    actor_cull_vertex(A,B,C); // Get all 12 vertices for current actor
+
+    init_poly_gfx(&cull_gfx_p, &cull_gfx_d, SETTINGS_COLVIEW_SURFACE,
+                                          1 /* xlu */,
+                                          0 /* shaded */);
+	// Front face
+	uint32_t color;
+    if (gz.selected_actor.ptr->flags & 0x0040)
+	  color = 0x008000;
+    else
+	  color = 0x800000;
+
+	gDPSetPrimColor((*p_gfx_p)++, 0, 0,
+                (color >> 16) & 0xFF,
+                (color >> 8)  & 0xFF,
+                (color >> 0)  & 0xFF,
+                0xFF);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &A[0], &A[1],
+          &A[2], &A[3]);
+    // Front Sides
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &A[2], &A[3],
+          &B[3], &B[2]);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &A[0], &A[1],
+          &B[1], &B[0]);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &A[0], &A[3],
+          &B[3], &B[0]);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &A[1], &A[2],
+          &B[2], &B[1]);
+	// Tail Sides
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &B[2], &B[3],
+          &C[3], &C[2]);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &B[0], &B[1],
+          &C[1], &C[0]);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &B[0], &B[3],
+          &C[3], &C[0]);
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &B[1], &B[2],
+          &C[2], &C[1]);
+	// Tail face
+	draw_quad(&cull_gfx_p, &cull_gfx_d,
+          &C[0], &C[1],
+          &C[2], &C[3]);
+
+    gSPEndDisplayList(cull_gfx_p++);
+    cache_writeback_data(cull_gfx, sizeof(*cull_gfx) * cull_gfx_cap);
+
+    gSPDisplayList((*p_gfx_p)++, cull_gfx);
+  }
+  if (gz.cull_view_state == CULLVIEW_BEGIN_STOP)
+    gz.cull_view_state = CULLVIEW_STOP;
+  else if (gz.cull_view_state == CULLVIEW_STOP) {
+    release_mem(&cull_gfx_buf[0]);
+    release_mem(&cull_gfx_buf[1]);
+
+    gz.cull_view_state = CULLVIEW_INACTIVE;
+	gz.selected_actor.ptr = NULL;
+    gz.selected_actor.type = -1;
+	gz.selected_actor.id = -1;
+  }
+}
 static void do_path_list(Gfx **p_gfx_p, Gfx **p_gfx_d,
                            z64_path_t *path_list)
 {
