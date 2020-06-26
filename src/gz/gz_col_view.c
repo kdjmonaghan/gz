@@ -1073,10 +1073,10 @@ static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
   float FC = gz.selected_actor.ptr->unk_0xFC;
 
   // Front face vertices
-  z = (F4+F8-mf_persp.wz)/mf_persp.zz;
-  y1 = (z - FC)/mf_persp.yy;
-  y2 = (-z + F8)/mf_persp.yy;
-  x1 = (-z + F8)/mf_persp.xx;
+  z = (F4 + F8 - mf_persp.wz)/mf_persp.zz;
+  y1 = (-z * mf_persp.zw - FC)/mf_persp.yy;
+  y2 = (z * mf_persp.zw + F8)/mf_persp.yy;
+  x1 = (z * mf_persp.zw + F8)/mf_persp.xx;
   x2 = -x1;
   
   A[0].x = x1;
@@ -1096,10 +1096,10 @@ static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
   A[3].z = z;
   
   // middle vertices
-  z = mf_persp.zw;
-  y1 = (mf_persp.zw - FC)/mf_persp.yy;
-  y2 = (-mf_persp.zw + F8)/mf_persp.yy;
-  x1 = (-mf_persp.zw + F8)/mf_persp.xx;
+  z = 1.f/mf_persp.zw;
+  y1 = (-1.f - FC)/mf_persp.yy;
+  y2 = (1.f + F8)/mf_persp.yy;
+  x1 = (1.f + F8)/mf_persp.xx;
   x2 = -x1;
     
   B[0].x = x1;
@@ -1119,7 +1119,7 @@ static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
   B[3].z = z;
 
   //tail face vertices have same x,y as above
-  z = -(F8 + mf_persp.wz)/mf_persp.zz;
+  z = (-F8 - mf_persp.wz)/mf_persp.zz;
     
   C[0].x = x1;
   C[0].y = y1;
