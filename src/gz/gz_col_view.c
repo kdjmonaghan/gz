@@ -1048,6 +1048,9 @@ static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
   z64_xyzf_t B[4];
   z64_xyzf_t C[4];
   
+  if (gz.selected_actor.ptr == NULL)
+	return;
+  
   // wiivc cull logic:
   float scale;
   if (settings->bits.wiivc_cam)
@@ -1160,9 +1163,13 @@ void gz_cull_view(void)
 
   static Gfx *cull_gfx_buf[2];
   static int  cull_gfx_idx = 0;
-  static z64_xyzf_t A[4];
-  static z64_xyzf_t B[4];
-  static z64_xyzf_t C[4];
+  z64_xyzf_t this_A[4];
+  z64_xyzf_t this_B[4];
+  z64_xyzf_t this_C[4];
+  
+  z64_xyzf_t A[4];
+  z64_xyzf_t B[4];
+  z64_xyzf_t C[4];
 
   _Bool enable = zu_in_game() && z64_game.pause_ctxt.state == 0;
   
@@ -1170,7 +1177,20 @@ void gz_cull_view(void)
     cull_gfx_buf[0] = malloc(sizeof(*cull_gfx_buf[0]) * cull_gfx_cap);
     cull_gfx_buf[1] = malloc(sizeof(*cull_gfx_buf[1]) * cull_gfx_cap);
 
-    gz.cull_view_state = CULLVIEW_ACTIVE;
+	// If in c-up, don't activate cullview until 1 frame has passed.
+	if (z64_link.state_flags_1 & 0x00100000)
+	  gz.cull_view_state = CULLVIEW_BEGIN_ACTIVE;
+	else
+	  gz.cull_view_state = CULLVIEW_ACTIVE;
+  
+	actor_cull_vertex(gz.selected_actor.last_A,
+	                  gz.selected_actor.last_B,
+	                  gz.selected_actor.last_C);
+	
+  }
+  if (enable && gz.cull_view_state == CULLVIEW_BEGIN_ACTIVE) {
+    if (gz.frames_queued != 0)
+	  gz.cull_view_state = CULLVIEW_ACTIVE;
   }
   if (enable && gz.cull_view_state == CULLVIEW_ACTIVE) {
 	// If actor has no type, stop
@@ -1218,7 +1238,20 @@ void gz_cull_view(void)
     Gfx *cull_gfx_d = cull_gfx + cull_gfx_cap;
     cull_gfx_idx = (cull_gfx_idx + 1) % 2;
 
-    actor_cull_vertex(A,B,C); // Get all 12 vertices for current actor
+    actor_cull_vertex(this_A,this_B,this_C); // Get all 12 vertices for current actor
+	
+	// if in c-up mode, use last frame's vertices
+	if (z64_link.state_flags_1 & 0x00100000){
+		memcpy(&A, &gz.selected_actor.last_A, sizeof(A));
+		memcpy(&B, &gz.selected_actor.last_B, sizeof(B));
+		memcpy(&C, &gz.selected_actor.last_C, sizeof(C));
+	}
+	else
+	{
+		memcpy(&A, &this_A, sizeof(A));
+		memcpy(&B, &this_B, sizeof(B));
+		memcpy(&C, &this_C, sizeof(C));
+	}
 	
     init_poly_gfx(&cull_gfx_p, &cull_gfx_d, SETTINGS_COLVIEW_SURFACE,
                                           1 /* xlu */,
@@ -1274,6 +1307,14 @@ void gz_cull_view(void)
     cache_writeback_data(cull_gfx, sizeof(*cull_gfx) * cull_gfx_cap);
 
     gSPDisplayList((*p_gfx_p)++, cull_gfx);
+    // If not in a paused frame, update last frame A,B,C 
+	if (gz.frames_queued != 0)
+	{
+	  memcpy(&gz.selected_actor.last_A, this_A, sizeof(this_A));
+	  memcpy(&gz.selected_actor.last_B, this_B, sizeof(this_B));
+	  memcpy(&gz.selected_actor.last_C, this_C, sizeof(this_C));
+	}
+  
   }
   if (gz.cull_view_state == CULLVIEW_BEGIN_STOP)
     gz.cull_view_state = CULLVIEW_STOP;
