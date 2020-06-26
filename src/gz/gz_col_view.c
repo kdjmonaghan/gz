@@ -1039,55 +1039,28 @@ void gz_hit_view(void)
   }
 }
 
-static void vector_rotate(z64_xyzf_t* b, z64_xyzf_t* a, MtxF* mf)
-{
-  // b = a * mf
-  b->x = (a->x * mf->xx) + (a->y * mf->yx) + (a->z * mf->zx);
-  b->y = (a->x * mf->xy) + (a->y * mf->yy) + (a->z * mf->zy);
-  b->z = (a->x * mf->xz) + (a->y * mf->yz) + (a->z * mf->zz);
-}
-
-static void vector_translate(z64_xyzf_t* b, float x, float y, float z)
-{
-  b->x = b->x + x;
-  b->y = b->y + y;
-  b->z = b->z + z;
-}
-
 static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
 {
   MtxF mf_persp;
-  MtxF mf_look;
+  MtxF mf_inv_look;
   
   z64_xyzf_t A[4];
   z64_xyzf_t B[4];
   z64_xyzf_t C[4];
   
+  // wiivc cull logic:
   float scale;
-  
-  // Not sure if this wiivc cull logic is needed or if the hook deals with it but just to be safe:
   if (settings->bits.wiivc_cam)
     scale = 1.f;
   else
 	scale = z64_view.scale;
   
+  // get perspective and inverse lookAt matrices
   guPerspectiveF(&mf_persp, NULL, z64_view.fovy * M_PI / 180.f, 4.0f/3.0f, z64_view.zNear, z64_view.zFar, scale);
-  guLookAtF(&mf_look,
+  guInvLookAtF(&mf_inv_look,
                z64_view.eye.x, z64_view.eye.y, z64_view.eye.z,
                z64_view.at.x,  z64_view.at.y,  z64_view.at.z,
                z64_view.up.x,  z64_view.up.y,  z64_view.up.z);
-  float temp;
-  temp = mf_look.xy;
-  mf_look.xy = mf_look.yx;
-  mf_look.yx = temp;
-  
-  temp = mf_look.xz;
-  mf_look.xz = mf_look.zx;
-  mf_look.zx = temp;
-  
-  temp = mf_look.yz;
-  mf_look.yz = mf_look.zy;
-  mf_look.zy = temp;
 
   float x1;
   float x2;
@@ -1145,7 +1118,7 @@ static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
   B[3].y = y1;
   B[3].z = z;
 
-  //tail face vertices
+  //tail face vertices have same x,y as above
   z = -(F8 + mf_persp.wz)/mf_persp.zz;
     
   C[0].x = x1;
@@ -1164,37 +1137,21 @@ static void actor_cull_vertex(z64_xyzf_t* Av, z64_xyzf_t* Bv, z64_xyzf_t* Cv)
   C[3].y = y1;
   C[3].z = z;
   
-  // Now rotate them
-  vector_rotate(&Av[0], &A[0], &mf_look);
-  vector_rotate(&Av[1], &A[1], &mf_look);
-  vector_rotate(&Av[2], &A[2], &mf_look);
-  vector_rotate(&Av[3], &A[3], &mf_look);
+  // Apply inverse lookAt to move shape to camera:
+  vec3f_MtxF_mult(&Av[0], &A[0], &mf_inv_look);
+  vec3f_MtxF_mult(&Av[1], &A[1], &mf_inv_look);
+  vec3f_MtxF_mult(&Av[2], &A[2], &mf_inv_look);
+  vec3f_MtxF_mult(&Av[3], &A[3], &mf_inv_look);
   
-  vector_rotate(&Bv[0], &B[0], &mf_look);
-  vector_rotate(&Bv[1], &B[1], &mf_look);
-  vector_rotate(&Bv[2], &B[2], &mf_look);
-  vector_rotate(&Bv[3], &B[3], &mf_look);
+  vec3f_MtxF_mult(&Bv[0], &B[0], &mf_inv_look);
+  vec3f_MtxF_mult(&Bv[1], &B[1], &mf_inv_look);
+  vec3f_MtxF_mult(&Bv[2], &B[2], &mf_inv_look);
+  vec3f_MtxF_mult(&Bv[3], &B[3], &mf_inv_look);
   
-  vector_rotate(&Cv[0], &C[0], &mf_look);
-  vector_rotate(&Cv[1], &C[1], &mf_look);
-  vector_rotate(&Cv[2], &C[2], &mf_look);
-  vector_rotate(&Cv[3], &C[3], &mf_look);
-  
-  // Now translate them
-  vector_translate(&Av[0], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Av[1], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Av[2], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Av[3], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  
-  vector_translate(&Bv[0], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Bv[1], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Bv[2], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Bv[3], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  
-  vector_translate(&Cv[0], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Cv[1], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Cv[2], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
-  vector_translate(&Cv[3], z64_view.eye.x, z64_view.eye.y, z64_view.eye.z);
+  vec3f_MtxF_mult(&Cv[0], &C[0], &mf_inv_look);
+  vec3f_MtxF_mult(&Cv[1], &C[1], &mf_inv_look);
+  vec3f_MtxF_mult(&Cv[2], &C[2], &mf_inv_look);
+  vec3f_MtxF_mult(&Cv[3], &C[3], &mf_inv_look);
 }
 
 void gz_cull_view(void)
@@ -1266,7 +1223,7 @@ void gz_cull_view(void)
     init_poly_gfx(&cull_gfx_p, &cull_gfx_d, SETTINGS_COLVIEW_SURFACE,
                                           1 /* xlu */,
                                           0 /* shaded */);
-	// Front face
+	
 	uint32_t color;
     if (gz.selected_actor.ptr->flags & 0x0040)
 	  color = 0x008000;
@@ -1278,6 +1235,7 @@ void gz_cull_view(void)
                 (color >> 8)  & 0xFF,
                 (color >> 0)  & 0xFF,
                 0xFF);
+	// Front face
 	draw_quad(&cull_gfx_p, &cull_gfx_d,
           &A[0], &A[1],
           &A[2], &A[3]);

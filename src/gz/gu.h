@@ -35,6 +35,10 @@ void guLookAtF(MtxF *mf,
                float xEye, float yEye, float zEye,
                float xAt, float yAt, float zAt,
                float xUp, float yUp, float zUp);
+void guInvLookAtF(MtxF *mf,
+               float xEye, float yEye, float zEye,
+               float xAt, float yAt, float zAt,
+               float xUp, float yUp, float zUp);
 void guMtxCatF(const MtxF *m, const MtxF *n, MtxF *r);
 void guRotateF(MtxF *mf, float a, float x, float y, float z);
 void guRotateRPYF(MtxF *mf, float r, float p, float h);
