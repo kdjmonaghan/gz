@@ -62,7 +62,10 @@ static void save_ovl(void **p, void *addr,
     Z64_VERSION == Z64_OOT12
   hdr = (void*)(end - *hdr_off);
 #elif Z64_VERSION == Z64_OOTMQJ || \
-      Z64_VERSION == Z64_OOTGCJ
+      Z64_VERSION == Z64_OOTMQU || \
+      Z64_VERSION == Z64_OOTGCJ || \
+      Z64_VERSION == Z64_OOTGCU || \
+      Z64_VERSION == Z64_OOTCEJ
   z64_ovl_hdr_t l_hdr;
   hdr = &l_hdr;
   yaz0_begin(file->prom_start);
@@ -143,7 +146,10 @@ static void load_ovl(void **p, void **p_addr,
     Z64_VERSION == Z64_OOT12
   hdr = (void*)(end - *hdr_off);
 #elif Z64_VERSION == Z64_OOTMQJ || \
-      Z64_VERSION == Z64_OOTGCJ
+      Z64_VERSION == Z64_OOTMQU || \
+      Z64_VERSION == Z64_OOTGCJ || \
+      Z64_VERSION == Z64_OOTGCU || \
+      Z64_VERSION == Z64_OOTCEJ
   z64_ovl_hdr_t l_hdr;
   hdr = &l_hdr;
   serial_read(p, hdr, sizeof(*hdr));
@@ -646,6 +652,9 @@ uint32_t save_state(void *state)
   serial_write(&p, &z64_letterbox_target, sizeof(z64_letterbox_target));
   serial_write(&p, &z64_letterbox_current, sizeof(z64_letterbox_current));
   serial_write(&p, &z64_letterbox_time, sizeof(z64_letterbox_time));
+
+  /* poly color filter state (sepia effect) */
+  serial_write(&p, z64_poly_colorfilter_state, 0x001C);
 
   /* sound state */
   serial_write(&p, z64_sound_state, 0x004C);
@@ -1414,6 +1423,9 @@ void load_state(void *state)
   serial_read(&p, &z64_letterbox_target, sizeof(z64_letterbox_target));
   serial_read(&p, &z64_letterbox_current, sizeof(z64_letterbox_current));
   serial_read(&p, &z64_letterbox_time, sizeof(z64_letterbox_time));
+
+  /* poly color filter state (sepia effect) */
+  serial_read(&p, z64_poly_colorfilter_state, 0x001C);
 
   /* sound state */
   serial_read(&p, z64_sound_state, 0x004C);

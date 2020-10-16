@@ -16,6 +16,8 @@
 #include "menu.h"
 #include "resource.h"
 #include "settings.h"
+#include "start.h"
+#include "util.h"
 #include "watchlist.h"
 #include "z64.h"
 #include "zu.h"
@@ -25,35 +27,6 @@ struct gz gz =
 {
   .ready = 0,
 };
-
-static __attribute__((section(".sdata")))
-void *stack_ptr;
-
-static inline void init_stack(void)
-{
-  static __attribute__((section(".stack"))) _Alignas(8)
-  char _stack[0x2000];
-  static __attribute__((section(".sbss")))
-  void *t0_save;
-  __asm__ volatile ("sw      $t0, %[t0_save];"
-                    "la      $t0, %[stack_top];"
-                    "sw      $t0, %[stack_ptr];"
-                    "lw      $t0, %[t0_save];"
-                    : [stack_ptr] "=m"(stack_ptr), [t0_save] "=m"(t0_save)
-                    : [stack_top] "i"(&_stack[sizeof(_stack) - 0x10]));
-}
-
-static inline void xchg_stack(void)
-{
-  static __attribute__((section(".sbss")))
-  void *t0_save;
-  __asm__ volatile ("sw      $t0, %[t0_save];"
-                    "lw      $t0, %[stack_ptr];"
-                    "sw      $sp, %[stack_ptr];"
-                    "move    $sp, $t0;"
-                    "lw      $t0, %[t0_save];"
-                    : [stack_ptr] "+m"(stack_ptr), [t0_save] "=m"(t0_save));
-}
 
 static void update_cpu_counter(void)
 {
@@ -406,9 +379,11 @@ static void main_hook(void)
       gfx_mode_set(GFX_MODE_COLOR, GPACK_RGBA8888(0xC0, 0x00, 0x00, alpha));
       const char *tarname = STRINGIFY(PACKAGE_TARNAME);
       const char *url = STRINGIFY(PACKAGE_URL);
-      gfx_printf(font, 20, Z64_SCREEN_HEIGHT - 10 - ch, tarname);
+      const char *version = STRINGIFY(PACKAGE_VERSION);
+      gfx_printf(font, 20, Z64_SCREEN_HEIGHT - 12 - ch * 2, tarname);
+      gfx_printf(font, 20, Z64_SCREEN_HEIGHT - 10 - ch, version);
       gfx_printf(font, Z64_SCREEN_WIDTH - 16 - cw * strlen(url),
-                 Z64_SCREEN_HEIGHT - 10 - ch, url);
+                 Z64_SCREEN_HEIGHT - 12 - ch * 2, url);
       if (!logo_texture)
         logo_texture = resource_load_grc_texture("logo");
       gfx_mode_set(GFX_MODE_COLOR, GPACK_RGBA8888(0xFF, 0xFF, 0xFF, alpha));
@@ -417,7 +392,7 @@ static void main_hook(void)
         {
           logo_texture, i,
           Z64_SCREEN_WIDTH - 16 - logo_texture->tile_width,
-          Z64_SCREEN_HEIGHT - 10 - ch * 2 -
+          Z64_SCREEN_HEIGHT - 12 - ch * 3 -
           (logo_texture->tiles_y - i) * logo_texture->tile_height,
           1.f, 1.f,
         };
@@ -465,7 +440,7 @@ static void main_hook(void)
 
 HOOK int32_t room_load_sync_hook(OSMesgQueue *mq, OSMesg *msg, int32_t flag)
 {
-  init_gp();
+  maybe_init_gp();
   if (!gz.ready || gz.movie_state == MOVIE_IDLE) {
     /* default behavior */
     return z64_osRecvMesg(mq, msg, flag);
@@ -504,7 +479,7 @@ HOOK int32_t room_load_sync_hook(OSMesgQueue *mq, OSMesg *msg, int32_t flag)
 
 HOOK void entrance_offset_hook(void)
 {
-  init_gp();
+  maybe_init_gp();
   uint32_t offset;
   if (!gz.ready)
     offset = z64_file.scene_setup_index;
@@ -529,7 +504,7 @@ HOOK void entrance_offset_hook(void)
 
 HOOK void draw_room_hook(z64_game_t *game, z64_room_t *room, int unk_a2)
 {
-  init_gp();
+  maybe_init_gp();
   if (gz.ready && gz.hide_rooms) {
     struct zu_disp_p disp_p;
     zu_save_disp_p(&disp_p);
@@ -542,7 +517,7 @@ HOOK void draw_room_hook(z64_game_t *game, z64_room_t *room, int unk_a2)
 
 HOOK void draw_actors_hook(z64_game_t *game, void *actor_ctxt)
 {
-  init_gp();
+  maybe_init_gp();
   if (gz.ready && gz.hide_actors) {
     struct zu_disp_p disp_p;
     zu_save_disp_p(&disp_p);
@@ -567,7 +542,7 @@ static void mask_input(z64_input_t *input)
 
 HOOK void input_hook(void)
 {
-  init_gp();
+  maybe_init_gp();
   if (!gz.ready)
     z64_UpdateCtxtInput(&z64_ctxt);
   else if (gz.frames_queued != 0) {
@@ -634,7 +609,7 @@ HOOK void input_hook(void)
 
 HOOK void disp_hook(z64_disp_buf_t *disp_buf, Gfx *buf, uint32_t size)
 {
-  init_gp();
+  maybe_init_gp();
   if (gz.ready) {
     z64_disp_buf_t *z_disp[4] =
     {
@@ -668,20 +643,8 @@ static void state_main_hook(void)
     gz.oca_sync_flag = 0;
     gz.room_load_flag = 0;
     /* execute state */
-    {
-      register void *a0 __asm__ ("a0") = &z64_ctxt;
-      register void *t9 __asm__ ("t9") = z64_ctxt.state_main;
-      xchg_stack();
-      __asm__ volatile ("jalr    %[state_main];"
-                        : [state_main] "+r"(t9), "+r"(a0)
-                        :
-                        : "at", "v0", "v1",       "a1", "a2", "a3", "t0", "t1",
-                          "t2", "t3", "t4", "t5", "t6", "t7", "t8",       "ra",
-                          "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8",
-                          "f9", "f10", "f11", "f12", "f13", "f14", "f15", "f16",
-                          "f17", "f18", "f19", "cc", "memory");
-      xchg_stack();
-    }
+    gz_leave_func = z64_ctxt.state_main;
+    gz_leave(&z64_ctxt);
     /* if recording over a previous seed, erase it */
     if (gz.movie_state == MOVIE_RECORDING) {
       struct movie_seed *ms;
@@ -761,7 +724,7 @@ static void state_main_hook(void)
 
 HOOK void srand_hook(uint32_t seed)
 {
-  init_gp();
+  maybe_init_gp();
   if (gz.ready) {
     if (gz.movie_state == MOVIE_RECORDING) {
       /* insert a recorded seed */
@@ -811,7 +774,7 @@ HOOK void srand_hook(uint32_t seed)
 
 HOOK void ocarina_update_hook(void)
 {
-  init_gp();
+  maybe_init_gp();
   if (!gz.ready)
     z64_OcarinaUpdate();
   else if (gz.frame_flag) {
@@ -844,7 +807,7 @@ HOOK void ocarina_update_hook(void)
 
 HOOK void ocarina_input_hook(void *a0, z64_input_t *input, int a2)
 {
-  init_gp();
+  maybe_init_gp();
   z64_GetInput(a0, input, a2);
   if (gz.ready)
     mask_input(input);
@@ -890,7 +853,7 @@ HOOK void ocarina_input_hook(void *a0, z64_input_t *input, int a2)
 
 HOOK void ocarina_sync_hook(void)
 {
-  init_gp();
+  maybe_init_gp();
   /* the hook is placed in the middle of a function where there is not normally
      a function call, so some registers need to be saved
   */
@@ -898,6 +861,7 @@ HOOK void ocarina_sync_hook(void)
   {
     uint32_t v1;
     uint32_t a0;
+    uint32_t a1;
     uint32_t a3;
     uint32_t t0;
     uint32_t t1;
@@ -905,10 +869,11 @@ HOOK void ocarina_sync_hook(void)
   } regs;
   __asm__ volatile ("la      $v0, %[regs];"
                     "sw      $v1, 0x0000($v0);"
-                    "sw      $a3, 0x0008($v0);"
-                    "sw      $t0, 0x000C($v0);"
-                    "sw      $t1, 0x0010($v0);"
-                    "sw      $t6, 0x0014($v0);"
+                    "sw      $a1, 0x0008($v0);"
+                    "sw      $a3, 0x000C($v0);"
+                    "sw      $t0, 0x0010($v0);"
+                    "sw      $t1, 0x0014($v0);"
+                    "sw      $t6, 0x0018($v0);"
                     : [regs] "=m"(regs) :: "v0");
   int audio_frames;
   /* default behavior */
@@ -955,19 +920,21 @@ HOOK void ocarina_sync_hook(void)
   __asm__ volatile ("la      $v0, %[regs];"
                     "lw      $v1, 0x0000($v0);"
                     "lw      $a0, 0x0004($v0);"
-                    "lw      $a3, 0x0008($v0);"
-                    "lw      $t0, 0x000C($v0);"
-                    "lw      $t1, 0x0010($v0);"
-                    :: [regs] "m"(regs) : "v0", "v1", "a0", "a3", "t0", "t1");
+                    "lw      $a1, 0x0008($v0);"
+                    "lw      $a3, 0x000C($v0);"
+                    "lw      $t0, 0x0010($v0);"
+                    "lw      $t1, 0x0014($v0);"
+                    "lw      $t6, 0x0018($v0);"
+                    :: [regs] "m"(regs)
+                    : "v0", "v1", "a0", "a1", "a3", "t0", "t1", "t6");
 }
 
 HOOK uint32_t afx_rand_hook(void)
 {
-  init_gp();
+  maybe_init_gp();
   if (!gz.ready || gz.movie_state == MOVIE_IDLE) {
     /* produce a number using the audio rng, as normal */
-    uint32_t (*z64_afx_rand_func)(void) = (void*)&z64_afx_rand_func;
-    return z64_afx_rand_func();
+    return z64_AfxRand();
   }
   else {
     /* produce a number that is deterministic within gz movies */
@@ -982,7 +949,7 @@ HOOK uint32_t afx_rand_hook(void)
 HOOK void guPerspectiveF_hook(MtxF *mf)
 {
   /* replaces the guMtxIdentF function in guPerspectiveF */
-  init_gp();
+  maybe_init_gp();
   if (gz.ready && settings->bits.wiivc_cam) {
     /* overwrite the scale argument in guPerspectiveF */
     __asm__ volatile ("la      $t0, 0x3F800000;"
@@ -1163,26 +1130,6 @@ int main()
     init();
   state_main_hook();
   main_hook();
-}
-
-ENTRY void _start()
-{
-  static __attribute__((section(".sdata")))
-  void *ra_save;
-  init_gp();
-  init_stack();
-  xchg_stack();
-  __asm__ volatile ("sw      $ra, %[ra_save];"
-                    "jal     %[main];"
-                    "lw      $ra, %[ra_save];"
-                    : [ra_save] "=m"(ra_save)
-                    : [main] "i"(main)
-                    : "at", "v0", "v1", "a0", "a1", "a2", "a3", "t0", "t1",
-                      "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9",
-                      "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8",
-                      "f9", "f10", "f11", "f12", "f13", "f14", "f15", "f16",
-                      "f17", "f18", "f19", "cc", "memory");
-  xchg_stack();
 }
 
 /* support libraries */

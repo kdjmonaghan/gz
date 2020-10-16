@@ -12,7 +12,10 @@
 #define Z64_OOT11             0x01
 #define Z64_OOT12             0x02
 #define Z64_OOTMQJ            0x03
-#define Z64_OOTGCJ            0x04
+#define Z64_OOTMQU            0x04
+#define Z64_OOTGCJ            0x05
+#define Z64_OOTGCU            0x06
+#define Z64_OOTCEJ            0x07
 
 #define Z64_SCREEN_WIDTH      320
 #define Z64_SCREEN_HEIGHT     240
@@ -62,7 +65,10 @@ struct z64_arena
   char              unk_0xC[0x0004];          /* 0x000C */
                                               /* 0x0010 */
 #elif Z64_VERSION == Z64_OOTMQJ || \
-      Z64_VERSION == Z64_OOTGCJ
+      Z64_VERSION == Z64_OOTMQU || \
+      Z64_VERSION == Z64_OOTGCJ || \
+      Z64_VERSION == Z64_OOTGCU || \
+      Z64_VERSION == Z64_OOTCEJ
                                               /* 0x0008 */
 #endif
 };
@@ -86,7 +92,10 @@ struct z64_arena_node
   char              pad_0x28[0x0008];         /* 0x0028 */
   char              data[];                   /* 0x0030 */
 #elif Z64_VERSION == Z64_OOTMQJ || \
-      Z64_VERSION == Z64_OOTGCJ
+      Z64_VERSION == Z64_OOTMQU || \
+      Z64_VERSION == Z64_OOTGCJ || \
+      Z64_VERSION == Z64_OOTGCU || \
+      Z64_VERSION == Z64_OOTCEJ
   char              data[];                   /* 0x0010 */
 #endif
 };
@@ -779,7 +788,10 @@ typedef struct
   z64_gameinfo_t   *gameinfo;                 /* 0x1430 */
   char              unk_0x1434[0x001C];       /* 0x1434 */
 #elif Z64_VERSION == Z64_OOTMQJ || \
-      Z64_VERSION == Z64_OOTGCJ
+      Z64_VERSION == Z64_OOTMQU || \
+      Z64_VERSION == Z64_OOTGCJ || \
+      Z64_VERSION == Z64_OOTGCU || \
+      Z64_VERSION == Z64_OOTCEJ
   char              unk_0x1410[0x0018];       /* 0x1410 */
   z64_gameinfo_t   *gameinfo;                 /* 0x1428 */
   char              unk_0x142C[0x0024];       /* 0x142C */
@@ -1151,7 +1163,7 @@ typedef struct
 
 enum
 {
-  Z64_HIT_CYL_LIST,
+  Z64_HIT_SPH_LIST,
   Z64_HIT_CYL,
   Z64_HIT_TRI_LIST,
   Z64_HIT_QUAD,
@@ -1174,7 +1186,6 @@ typedef struct
   struct
   {
     z64_xyz_t       pos;                      /* 0x0030 */
-    /* also the distance from the center to the bottom and top */
     int16_t         radius;                   /* 0x0036 */
   };
   /* not used by hit tests */
@@ -1182,15 +1193,15 @@ typedef struct
   uint8_t           b_0x3C;                   /* 0x003C */
   char              unk_0x3D[0x0003];         /* 0x003D */
                                               /* 0x0040 */
-} z64_hit_cyl_ent_t;
+} z64_hit_sph_ent_t;
 
 typedef struct
 {
   z64_hit_t         base;                     /* 0x0000 */
   int32_t           n_ent;                    /* 0x0018 */
-  z64_hit_cyl_ent_t*ent_list;                 /* 0x001C */
+  z64_hit_sph_ent_t*ent_list;                 /* 0x001C */
                                               /* 0x0020 */
-} z64_hit_cyl_list_t;
+} z64_hit_sph_list_t;
 
 typedef struct
 {
@@ -2073,7 +2084,10 @@ typedef struct
 # define z64_vr_FCVR_static                     1003
 # define z64_vr_FCVR_pal_static                 1004
 #elif Z64_VERSION == Z64_OOTMQJ || \
-      Z64_VERSION == Z64_OOTGCJ
+      Z64_VERSION == Z64_OOTMQU || \
+      Z64_VERSION == Z64_OOTGCJ || \
+      Z64_VERSION == Z64_OOTGCU || \
+      Z64_VERSION == Z64_OOTCEJ
 # define z64_icon_item_static                   8
 # define z64_icon_item_24_static                9
 # define z64_icon_item_field_static             10
@@ -2215,6 +2229,7 @@ z64_extern  z64_arena_t           z64_game_arena;
 z64_extern  void                 *z64_map_mark_data_tab;
 z64_extern  char                  z64_timer_state[];
 z64_extern  char                  z64_camera_shake[];
+z64_extern  char                  z64_poly_colorfilter_state[];
 z64_extern  OSThread              z64_thread_sched;
 z64_extern  OSThread              z64_thread_padmgr;
 z64_extern  z64_input_t           z64_input_direct;
