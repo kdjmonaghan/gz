@@ -169,6 +169,8 @@ static void main_hook(void)
   }
   if (settings->cheats & (1 << CHEAT_NOMAP))
     z64_file.gameinfo->minimap_disabled = 1;
+  if (settings->cheats && (1 << CHEAT_NOHUD))
+    z64_file.hud = 1;
   if (settings->cheats & (1 << CHEAT_ISG))
     z64_link.sword_state = 1;
   if (settings->cheats & (1 << CHEAT_QUICKTEXT))

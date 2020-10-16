@@ -579,6 +579,7 @@ typedef struct
   int16_t           n64dd_flag;               /* 0x002C */
   int16_t           energy_capacity;          /* 0x002E */
   int16_t           energy;                   /* 0x0030 */
+  uint8_t           hud;                      /* 0x6808 */
   uint8_t           magic_capacity_set;       /* 0x0032 */
   uint8_t           magic;                    /* 0x0033 */
   uint16_t          rupees;                   /* 0x0034 */

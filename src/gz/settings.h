@@ -56,6 +56,7 @@ enum cheats
   CHEAT_ISG,
   CHEAT_QUICKTEXT,
   CHEAT_MAX,
+  CHEAT_NOHUD,
 };
 
 enum commands
