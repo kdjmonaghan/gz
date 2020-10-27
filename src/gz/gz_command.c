@@ -43,6 +43,8 @@ struct command_info command_info[COMMAND_MAX] =
   {"play macro",        command_playmacro,     CMDACT_PRESS_ONCE},
   {"collision view",    command_colview,       CMDACT_PRESS_ONCE},
   {"hitbox view",       command_hitview,       CMDACT_PRESS_ONCE},
+  {"path view",         command_pathview,      CMDACT_PRESS_ONCE},
+  {"waterbox view",     command_waterview,     CMDACT_PRESS_ONCE},
   {"explore prev room", NULL,                  CMDACT_PRESS},
   {"explore next room", NULL,                  CMDACT_PRESS},
   {"reset lag counter", command_resetlag,      CMDACT_HOLD},
@@ -463,6 +465,22 @@ void command_hitview(void)
     gz.hit_view_state = HITVIEW_START;
   else
     gz.hit_view_state = HITVIEW_BEGIN_STOP;
+}
+
+void command_waterview(void)
+{
+  if (gz.water_view_state == WATERVIEW_INACTIVE)
+    gz.water_view_state = WATERVIEW_START;
+  else
+    gz.water_view_state = WATERVIEW_BEGIN_STOP;
+}
+
+void command_pathview(void)
+{
+  if (gz.path_view_state == PATHVIEW_INACTIVE)
+    gz.path_view_state = PATHVIEW_START;
+  else
+    gz.path_view_state = PATHVIEW_BEGIN_STOP;
 }
 
 void command_resetlag(void)

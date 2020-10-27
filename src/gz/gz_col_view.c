@@ -36,6 +36,19 @@ static void vtxn_f2l(Vtx *r, z64_xyzf_t *v)
                    0xFF);
 }
 
+static void draw_line(Gfx **p_gfx_p, Gfx **p_gfx_d,
+                     z64_xyz_t *v1, z64_xyz_t *v2)
+{
+  Vtx v[2] =
+  {
+    gdSPDefVtxC(v1->x, v1->y, v1->z, 0, 0, 0x00, 0x00, 0x00, 0xFF),
+    gdSPDefVtxC(v2->x, v2->y, v2->z, 0, 0, 0x00, 0x00, 0x00, 0xFF),
+  };
+
+  gSPVertex((*p_gfx_p)++, gDisplayListData(p_gfx_d, v), 2, 0);
+  gSPLine3D((*p_gfx_p)++, 0, 1, 0);
+}
+
 static void tri_norm(z64_xyzf_t *v1, z64_xyzf_t *v2, z64_xyzf_t *v3,
                      z64_xyzf_t *norm)
 {
@@ -1036,5 +1049,193 @@ void gz_hit_view(void)
     release_mem(&hit_gfx_buf[1]);
 
     gz.hit_view_state = HITVIEW_INACTIVE;
+  }
+}
+
+static void do_waterbox_list(Gfx **p_gfx_p, Gfx **p_gfx_d,
+                           int n_waterboxes, z64_col_water_t *waterbox_list, int cur_room,
+                           uint32_t color)
+{
+  const float water_max_depth = -4000.0f;
+
+  gDPSetPrimColor((*p_gfx_p)++, 0, 0,
+                  (color >> 16) & 0xFF,
+                  (color >> 8)  & 0xFF,
+                  (color >> 0)  & 0xFF,
+                  0xFF);
+
+  for (z64_col_water_t *cur_water = waterbox_list; cur_water < waterbox_list + n_waterboxes; ++cur_water) {
+    if (cur_water->flags.group == 0x3F || cur_water->flags.group == cur_room) {
+      z64_xyzf_t points[] = {
+        { cur_water->pos.x, cur_water->pos.y, cur_water->pos.z },
+        { cur_water->pos.x + cur_water->width, cur_water->pos.y, cur_water->pos.z },
+        { cur_water->pos.x + cur_water->width, cur_water->pos.y, cur_water->pos.z + cur_water->depth },
+        { cur_water->pos.x, cur_water->pos.y, cur_water->pos.z + cur_water->depth },
+        { cur_water->pos.x, water_max_depth, cur_water->pos.z },
+        { cur_water->pos.x + cur_water->width, water_max_depth, cur_water->pos.z },
+        { cur_water->pos.x + cur_water->width, water_max_depth, cur_water->pos.z + cur_water->depth },
+        { cur_water->pos.x, water_max_depth, cur_water->pos.z + cur_water->depth },
+      };
+      draw_quad(p_gfx_p, p_gfx_d, &points[0], &points[1], &points[2], &points[3]);
+      draw_quad(p_gfx_p, p_gfx_d, &points[0], &points[1], &points[5], &points[4]);
+      draw_quad(p_gfx_p, p_gfx_d, &points[1], &points[2], &points[6], &points[5]);
+      draw_quad(p_gfx_p, p_gfx_d, &points[2], &points[3], &points[7], &points[6]);
+      draw_quad(p_gfx_p, p_gfx_d, &points[3], &points[0], &points[4], &points[7]);
+    }
+  }
+  /*
+   * There is a special hardcoded check for Zora's Domain in a function related to handling collision
+   * detection with waterboxes that creates a "fake" waterbox between two hardcoded positions. Unlike
+   * every other waterbox in the game, this one has a depth below which you fall out of the bottom.
+   */
+  if (z64_game.scene_index == 0x58) {
+    z64_xyzf_t points[] = {
+      { -348.0, 877.0, -1746.0 },
+      { 205.0, 877.0, -1746.0 },
+      { 205.0, 877.0, -967.0 },
+      { -348.0, 877.0, -967.0 },
+      { -348.0, 777.0, -1746.0 },
+      { 205.0, 777.0, -1746.0 },
+      { 205.0, 777.0, -967.0 },
+      { -348.0, 777.0, -967.0 },
+    };
+    draw_quad(p_gfx_p, p_gfx_d, &points[0], &points[1], &points[2], &points[3]);
+    draw_quad(p_gfx_p, p_gfx_d, &points[0], &points[1], &points[5], &points[4]);
+    draw_quad(p_gfx_p, p_gfx_d, &points[1], &points[2], &points[6], &points[5]);
+    draw_quad(p_gfx_p, p_gfx_d, &points[2], &points[3], &points[7], &points[6]);
+    draw_quad(p_gfx_p, p_gfx_d, &points[3], &points[0], &points[4], &points[7]);
+    draw_quad(p_gfx_p, p_gfx_d, &points[4], &points[5], &points[6], &points[7]);
+  }
+}
+
+void gz_water_view(void)
+{
+  const int water_gfx_cap = 0x800;
+
+  static Gfx *water_gfx_buf[2];
+  static int  water_gfx_idx = 0;
+
+  _Bool enable = zu_in_game() && z64_game.pause_ctxt.state == 0;
+
+  if (enable && gz.water_view_state == WATERVIEW_START) {
+    water_gfx_buf[0] = malloc(sizeof(*water_gfx_buf[0]) * water_gfx_cap);
+    water_gfx_buf[1] = malloc(sizeof(*water_gfx_buf[1]) * water_gfx_cap);
+
+    gz.water_view_state = WATERVIEW_ACTIVE;
+  }
+  if (enable && gz.water_view_state == WATERVIEW_ACTIVE && z64_game.col_ctxt.col_hdr->n_water != 0) {
+    Gfx **p_gfx_p;
+    if (settings->bits.water_view_xlu)
+      p_gfx_p = &z64_ctxt.gfx->poly_xlu.p;
+    else
+      p_gfx_p = &z64_ctxt.gfx->poly_opa.p;
+
+    Gfx *water_gfx = water_gfx_buf[water_gfx_idx];
+    Gfx *water_gfx_p = water_gfx;
+    Gfx *water_gfx_d = water_gfx + water_gfx_cap;
+    water_gfx_idx = (water_gfx_idx + 1) % 2;
+
+    init_poly_gfx(&water_gfx_p, &water_gfx_d, SETTINGS_COLVIEW_SURFACE,
+                                          settings->bits.water_view_xlu,
+                                          settings->bits.water_view_shade);
+    do_waterbox_list(&water_gfx_p, &water_gfx_d,
+                    z64_game.col_ctxt.col_hdr->n_water, z64_game.col_ctxt.col_hdr->water,
+                    z64_game.room_ctxt.rooms[0].index, 0x57ACF3);
+    for (int i = 0; i < 50; ++i) {
+      if (z64_game.col_ctxt.dyn_flags[i].active) {
+        z64_col_hdr_t *dyn_col_hdr = z64_game.col_ctxt.dyn_col[i].col_hdr;
+
+        do_waterbox_list(&water_gfx_p, &water_gfx_d,
+                    dyn_col_hdr->n_water, dyn_col_hdr->water,
+                    z64_game.room_ctxt.rooms[0].index, 0x57ACF3);
+      }
+    }
+
+    gSPEndDisplayList(water_gfx_p++);
+    cache_writeback_data(water_gfx, sizeof(*water_gfx) * water_gfx_cap);
+
+    gSPDisplayList((*p_gfx_p)++, water_gfx);
+  }
+  if (gz.water_view_state == WATERVIEW_BEGIN_STOP)
+    gz.water_view_state = WATERVIEW_STOP;
+  else if (gz.water_view_state == WATERVIEW_STOP) {
+    release_mem(&water_gfx_buf[0]);
+    release_mem(&water_gfx_buf[1]);
+
+    gz.water_view_state = WATERVIEW_INACTIVE;
+  }
+}
+
+static void do_path_list(Gfx **p_gfx_p, Gfx **p_gfx_d,
+                           z64_path_t *path_list)
+{
+  const float path_marker_radius = 18.0f;
+
+  z64_path_t *cur_path = path_list;
+
+  if (cur_path != NULL && (settings->bits.path_view_points || settings->bits.path_view_lines)) {
+    while (((cur_path->points << 4) >> 28) == Z64_SEG_SCENE && cur_path->numpoints != 0) {
+      z64_xyz_t *points = (z64_xyz_t*)((z64_stab.seg[Z64_SEG_SCENE]+0x80000000) + (cur_path->points & 0x00FFFFFF));
+      if (settings->bits.path_view_lines) {
+        load_l3dex2(p_gfx_p);
+        init_line_gfx(p_gfx_p, p_gfx_d, settings->bits.path_view_xlu);
+        for (int i = 0; i < cur_path->numpoints; ++i) {
+          if (i + 1 != cur_path->numpoints) {
+            draw_line(p_gfx_p, p_gfx_d, &points[i], &points[i+1]);
+          }
+        }
+        zu_set_lighting_ext(p_gfx_p, p_gfx_d);
+        unload_l3dex2(p_gfx_p);
+      }
+      if (settings->bits.path_view_points) {
+        for (int i = 0; i < cur_path->numpoints; ++i) {
+          draw_ico_sphere(p_gfx_p, p_gfx_d, points[i].x, points[i].y, points[i].z, path_marker_radius);
+        }
+      }
+      cur_path++;
+    }
+  }
+}
+
+void gz_path_view(void)
+{
+  const int path_gfx_cap = 0x800;
+
+  static Gfx *path_gfx_buf[2];
+  static int  path_gfx_idx = 0;
+
+  _Bool enable = zu_in_game() && z64_game.pause_ctxt.state == 0;
+
+  if (enable && gz.path_view_state == PATHVIEW_START) {
+    path_gfx_buf[0] = malloc(sizeof(*path_gfx_buf[0]) * path_gfx_cap);
+    path_gfx_buf[1] = malloc(sizeof(*path_gfx_buf[1]) * path_gfx_cap);
+
+    gz.path_view_state = PATHVIEW_ACTIVE;
+  }
+  if (enable && gz.path_view_state == PATHVIEW_ACTIVE) {
+    Gfx **p_gfx_p;
+    if (settings->bits.path_view_xlu)
+      p_gfx_p = &z64_ctxt.gfx->poly_xlu.p;
+    else
+      p_gfx_p = &z64_ctxt.gfx->poly_opa.p;
+
+    Gfx *path_gfx = path_gfx_buf[path_gfx_idx];
+    Gfx *path_gfx_p = path_gfx;
+    Gfx *path_gfx_d = path_gfx + path_gfx_cap;
+    path_gfx_idx = (path_gfx_idx + 1) % 2;
+
+    do_path_list(&path_gfx_p, &path_gfx_d, z64_game.path_list);
+    gSPEndDisplayList(path_gfx_p++);
+    cache_writeback_data(path_gfx, sizeof(*path_gfx) * path_gfx_cap);
+
+    gSPDisplayList((*p_gfx_p)++, path_gfx);
+  }
+  if (gz.path_view_state == PATHVIEW_BEGIN_STOP)
+    gz.path_view_state = PATHVIEW_STOP;
+  else if (gz.path_view_state == PATHVIEW_STOP) {
+    release_mem(&path_gfx_buf[0]);
+    release_mem(&path_gfx_buf[1]);
+
+    gz.path_view_state = PATHVIEW_INACTIVE;
   }
 }
