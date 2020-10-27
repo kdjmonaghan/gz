@@ -540,7 +540,7 @@ void watchlist_add_debug_address(struct menu_item *item, int address)
 {
   struct item_data *list = item->data;
   enum watch_type type = WATCH_TYPE_X32;
-  add_member(list, address, type, list->members.size, 1, 0, 0, 0, 0);
+  add_member(list, address, type, list->members.size, 1, 0, 0, 0, 0, 0);
 }
 
 static void watchfile_view(struct menu *menu)
