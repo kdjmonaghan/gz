@@ -365,6 +365,7 @@ static void main_hook(void)
   /* execute and draw collision view */
   gz_col_view();
   gz_hit_view();
+  gz_guard_view();
 
   /* execute and draw path view */
   gz_path_view();
@@ -1056,6 +1057,7 @@ static void init(void)
   gz.hit_view_state = HITVIEW_INACTIVE;
   gz.water_view_state = WATERVIEW_INACTIVE;
   gz.path_view_state = PATHVIEW_INACTIVE;
+  gz.guard_view_state = GUARDVIEW_INACTIVE;
   gz.hide_rooms = 0;
   gz.hide_actors = 0;
   gz.free_cam = 0;

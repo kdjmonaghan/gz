@@ -59,6 +59,15 @@ enum water_view_state
   WATERVIEW_STOP,
 };
 
+enum guard_view_state
+{
+  GUARDVIEW_INACTIVE,
+  GUARDVIEW_START,
+  GUARDVIEW_ACTIVE,
+  GUARDVIEW_BEGIN_STOP,
+  GUARDVIEW_STOP,
+};
+
 enum cam_mode
 {
   CAMMODE_CAMERA,
@@ -191,6 +200,7 @@ struct gz
   int64_t               timer_counter_prev;
   int                   col_view_state;
   int                   hit_view_state;
+  int                   guard_view_state;
   int                   path_view_state;
   int                   water_view_state;
   _Bool                 hide_rooms;
@@ -271,6 +281,7 @@ void          gz_col_view(void);
 void          gz_hit_view(void);
 void          gz_path_view(void);
 void          gz_water_view(void);
+void          gz_guard_view(void);
 
 void          gz_update_cam(void);
 void          gz_free_view(void);

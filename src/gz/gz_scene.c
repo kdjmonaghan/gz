@@ -119,6 +119,27 @@ static int hit_view_proc(struct menu_item *item,
   return 0;
 }
 
+static int guard_view_proc(struct menu_item *item,
+                         enum menu_callback_reason reason,
+                         void *data)
+{
+  if (reason == MENU_CALLBACK_SWITCH_ON) {
+    if (gz.guard_view_state == GUARDVIEW_INACTIVE)
+      gz.guard_view_state = GUARDVIEW_START;
+  }
+  else if (reason == MENU_CALLBACK_SWITCH_OFF) {
+    if (gz.guard_view_state != GUARDVIEW_INACTIVE)
+      gz.guard_view_state = GUARDVIEW_BEGIN_STOP;
+  }
+  else if (reason == MENU_CALLBACK_THINK) {
+    _Bool state = gz.guard_view_state == GUARDVIEW_START ||
+                  gz.guard_view_state == GUARDVIEW_ACTIVE;
+    if (menu_checkbox_get(item) != state)
+      menu_checkbox_set(item, state);
+  }
+  return 0;
+}
+
 static int path_view_proc(struct menu_item *item,
                          enum menu_callback_reason reason,
                          void *data)
@@ -597,22 +618,23 @@ struct menu *gz_scene_menu(void)
   collision.selector = menu_add_submenu(&collision, 0, 0, NULL, "return");
   /* collision view controls */
   menu_add_static(&collision, 0, 1, "show collision", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 1, col_view_proc, NULL);
+  menu_add_checkbox(&collision, 17, 1, col_view_proc, NULL);
   menu_add_static(&collision, 2, 2, "mode", 0xC0C0C0);
-  menu_add_option(&collision, 16, 2, "decal\0""surface\0",
+  menu_add_option(&collision, 17, 2, "decal\0""surface\0",
                   col_view_mode_proc, NULL);
   menu_add_static(&collision, 2, 3, "translucent", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 3, col_view_xlu_proc, NULL);
+  menu_add_checkbox(&collision, 17, 3, col_view_xlu_proc, NULL);
   menu_add_static(&collision, 2, 4, "wireframe", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 4, col_view_line_proc, NULL);
+  menu_add_checkbox(&collision, 17, 4, col_view_line_proc, NULL);
   menu_add_static(&collision, 2, 5, "shaded", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 5, col_view_shade_proc, NULL);
+  menu_add_checkbox(&collision, 17, 5, col_view_shade_proc, NULL);
   menu_add_static(&collision, 2, 6, "reduced", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 6, col_view_rd_proc, NULL);
+  menu_add_checkbox(&collision, 17, 6, col_view_rd_proc, NULL);
   menu_add_static(&collision, 2, 7, "auto update", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 7, col_view_upd_proc, NULL);
+  menu_add_checkbox(&collision, 17, 7, col_view_upd_proc, NULL);
   /* hitbox view controls */
   menu_add_static(&collision, 0, 8, "show hitboxes", 0xC0C0C0);
+  menu_add_checkbox(&collision, 17, 8, hit_view_proc, NULL);
   menu_add_checkbox(&collision, 16, 8, hit_view_proc, NULL);
   menu_add_static(&collision, 2, 9, "hit (at)", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 9, hit_view_at_proc, NULL);
@@ -625,8 +647,12 @@ struct menu *gz_scene_menu(void)
   menu_add_static(&collision, 2, 13, "shaded", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 13, hit_view_shade_proc, NULL);
   menu_add_static(&collision, 2, 9, "translucent", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 9, hit_view_xlu_proc, NULL);
+  menu_add_checkbox(&collision, 17, 9, hit_view_xlu_proc, NULL);
   menu_add_static(&collision, 2, 10, "shaded", 0xC0C0C0);
+  menu_add_checkbox(&collision, 17, 10, hit_view_shade_proc, NULL);
+  /* guard vision control */
+  menu_add_static(&collision, 0, 11, "show guards view", 0xC0C0C0);
+  menu_add_checkbox(&collision, 17, 11, guard_view_proc, NULL);
   menu_add_checkbox(&collision, 16, 10, hit_view_shade_proc, NULL);
   /* water view controls */
   menu_add_static(&collision, 0, 11, "show waterboxes", 0xC0C0C0);
