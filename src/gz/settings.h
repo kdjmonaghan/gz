@@ -137,8 +137,11 @@ struct settings_bits
   uint32_t col_view_shade   : 1;
   uint32_t col_view_rd      : 1;
   uint32_t col_view_upd     : 1;
-  uint32_t hit_view_xlu     : 1;
-  uint32_t hit_view_shade   : 1;
+  uint32_t hit_view_xlu    : 1;
+  uint32_t hit_view_shade  : 1;
+  uint32_t hit_view_at     : 1;
+  uint32_t hit_view_ac     : 1;
+  uint32_t hit_view_oc     : 1;
   uint32_t path_view_xlu    : 1;
   uint32_t path_view_points : 1;
   uint32_t path_view_lines  : 1;
