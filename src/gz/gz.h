@@ -68,6 +68,16 @@ enum guard_view_state
   GUARDVIEW_STOP,
 };
 
+enum cull_view_state
+{
+  CULLVIEW_INACTIVE,
+  CULLVIEW_START,
+  CULLVIEW_BEGIN_ACTIVE,
+  CULLVIEW_ACTIVE,
+  CULLVIEW_BEGIN_STOP,
+  CULLVIEW_STOP,
+};
+
 enum cam_mode
 {
   CAMMODE_CAMERA,
@@ -150,6 +160,16 @@ struct log_entry
   int                   age;
 };
 
+struct selected_actor
+{
+  z64_actor_t          *ptr;
+  int32_t               id;
+  int32_t               type;
+  z64_xyzf_t            last_A[4];
+  z64_xyzf_t            last_B[4];
+  z64_xyzf_t            last_C[4];
+};
+
 struct gz
 {
   _Bool                 ready;
@@ -162,6 +182,7 @@ struct gz
   struct menu_item     *menu_watchlist;
   _Bool                 menu_active;
   struct log_entry      log[SETTINGS_LOG_MAX];
+  struct selected_actor selected_actor;
   _Bool                 entrance_override_once;
   _Bool                 entrance_override_next;
   int32_t               next_entrance;
@@ -200,6 +221,7 @@ struct gz
   int64_t               timer_counter_prev;
   int                   col_view_state;
   int                   hit_view_state;
+  int                   cull_view_state;
   int                   guard_view_state;
   int                   path_view_state;
   int                   water_view_state;
@@ -282,6 +304,7 @@ void          gz_hit_view(void);
 void          gz_path_view(void);
 void          gz_water_view(void);
 void          gz_guard_view(void);
+void          gz_cull_view(void);
 
 void          gz_update_cam(void);
 void          gz_free_view(void);
