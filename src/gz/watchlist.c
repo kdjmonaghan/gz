@@ -7,6 +7,8 @@
 #include "menu.h"
 #include "resource.h"
 #include "settings.h"
+#include "gz.h"
+#include "mem.h"
 
 struct item_data
 {
@@ -34,6 +36,7 @@ struct member_data
 };
 
 static struct gfx_texture *list_icons = NULL;
+static struct gfx_texture *wrench = NULL;
 
 static struct member_data *get_member(struct item_data *data, int index)
 {
@@ -124,6 +127,17 @@ static int anchor_button_activate_proc(struct menu_item *item)
   return 1;
 }
 
+static void edit_watch_in_memory_proc(struct menu_item *item, void *data)
+{
+  struct member_data *member_data = data;
+  struct menu_item *watch = menu_userwatch_watch(member_data->userwatch);
+  uint32_t address = 0x80000000;
+  address = menu_watch_get_address(watch);
+  menu_return_top(gz.menu_main);
+  menu_enter_top(gz.menu_main, gz.menu_mem);
+  mem_goto((uint32_t)address);
+}
+
 static int position_proc(struct menu_item *item,
                          enum menu_callback_reason reason,
                          void *data)
@@ -156,7 +170,7 @@ static int position_proc(struct menu_item *item,
 static void remove_button_proc(struct menu_item *item, void *data);
 static int add_member(struct item_data *data,
                       uint32_t address, enum watch_type type, int position,
-                      _Bool anchored, _Bool pointer, int offset, int x, int y, 
+                      _Bool anchored, _Bool pointer, int offset, int x, int y,
                       _Bool position_set)
 {
   if (data->members.size >= SETTINGS_WATCHES_MAX ||
@@ -174,14 +188,14 @@ static int add_member(struct item_data *data,
   member_data->data = data;
   member_data->index = position;
   member_data->member = menu_add_imenu(data->imenu, 0, position, &imenu);
-  member_data->anchor_button = menu_item_add(imenu, 2, 0, NULL, 0xFFFFFF);
+  member_data->anchor_button = menu_item_add(imenu, 4, 0, NULL, 0xFFFFFF);
   member_data->anchor_button->enter_proc = anchor_button_enter_proc;
   member_data->anchor_button->draw_proc = anchor_button_draw_proc;
   member_data->anchor_button->activate_proc = anchor_button_activate_proc;
   member_data->anchor_button->data = member_data;
-  member_data->positioning = menu_add_positioning(imenu, 4, 0,
+  member_data->positioning = menu_add_positioning(imenu, 6, 0,
                                                   position_proc, member_data);
-  member_data->userwatch = menu_add_userwatch(imenu, 6, 0, address, type, 
+  member_data->userwatch = menu_add_userwatch(imenu, 8, 0, address, type,
                                               pointer, offset);
   member_data->anchored = 1;
   member_data->anchor_anim_state = 0;
@@ -190,6 +204,8 @@ static int add_member(struct item_data *data,
   member_data->position_set = 1;
   menu_add_button_icon(imenu, 0, 0, list_icons, 1, 0xFF0000,
                        remove_button_proc, member_data);
+  menu_add_button_icon(imenu, 2, 0, wrench, 0, 0xFFFFFF,
+                       edit_watch_in_memory_proc, member_data);
 
   if (!settings->bits.watches_visible) {
     struct menu_item *watch = menu_userwatch_watch(member_data->userwatch);
@@ -243,7 +259,7 @@ static void add_button_proc(struct menu_item *item, void *data)
     pointer = menu_watch_get_pointer(last_watch);
     offset = menu_watch_get_offset(last_watch);
   }
-  add_member(item_data, address, type, item_data->members.size, 1, pointer, 
+  add_member(item_data, address, type, item_data->members.size, 1, pointer,
              offset, 0, 0, 0);
 }
 
@@ -321,10 +337,11 @@ struct menu_item *watchlist_create(struct menu *menu,
   vector_init(&data->members, sizeof(struct member_data*));
   if (!list_icons)
     list_icons = resource_load_grc_texture("list_icons");
+  if (!wrench)
+    wrench = resource_load_grc_texture("wrench");
   data->add_button = menu_add_button_icon(imenu, 0, 0,
                                           list_icons, 0, 0x00FF00,
                                           add_button_proc, data);
-
 
   struct gfx_texture *file_icons = resource_get(RES_ICON_FILE);
   data->import_button = menu_add_button_icon(imenu, 2, 0,
@@ -360,7 +377,7 @@ void watchlist_fetch(struct menu_item *item)
     remove_member(data, i);
   for (int i = 0; i < settings->n_watches; ++i)
     add_member(data, settings->watch_address[i], settings->watch_info[i].type,
-               i, settings->watch_info[i].anchored, 
+               i, settings->watch_info[i].anchored,
                settings->watch_info[i].pointer, settings->watch_offset[i],
                settings->watch_x[i], settings->watch_y[i],
                settings->watch_info[i].position_set);
@@ -517,6 +534,13 @@ static void watchfile_menu_init(void)
       watchfile_items[i] = item;
     }
   }
+}
+
+void watchlist_add_debug_address(struct menu_item *item, int address)
+{
+  struct item_data *list = item->data;
+  enum watch_type type = WATCH_TYPE_X32;
+  add_member(list, address, type, list->members.size, 1, 0, 0, 0, 0);
 }
 
 static void watchfile_view(struct menu *menu)
