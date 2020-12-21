@@ -130,14 +130,13 @@ float angle_dif(float a, float b)
   return d;
 }
 
-z64_xyzf_t *vec3f_MtxF_mult(z64_xyzf_t *r, z64_xyzf_t *a, MtxF *b)
+z64_xyzf_t *vec3f_xfmw(z64_xyzf_t *r, z64_xyzf_t *a, float w, MtxF *b)
 {
-  /* ignore w element of output and assume a.w = 1*/
   z64_xyzf_t v =
   {
-    a->x * b->xx + a->y * b->yx + a->z * b->zx + b->wx,
-    a->x * b->xy + a->y * b->yy + a->z * b->zy + b->wy,
-    a->x * b->xz + a->y * b->yz + a->z * b->zz + b->wz,
+    a->x * b->xx + a->y * b->yx + a->z * b->zx + w * b->wx,
+    a->x * b->xy + a->y * b->yy + a->z * b->zy + w * b->wy,
+    a->x * b->xz + a->y * b->yz + a->z * b->zz + w * b->wz,
   };
   *r = v;
   return r;

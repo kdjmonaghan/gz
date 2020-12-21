@@ -243,6 +243,7 @@ struct gz
   uint8_t               state_slot;
   _Bool                 reset_flag;
   _Bool                 frame_flag;
+  struct selected_actor selected_actor;
 };
 
 void          gz_apply_settings();
