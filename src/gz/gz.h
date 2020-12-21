@@ -182,7 +182,6 @@ struct gz
   struct menu_item     *menu_watchlist;
   _Bool                 menu_active;
   struct log_entry      log[SETTINGS_LOG_MAX];
-  struct selected_actor selected_actor;
   _Bool                 entrance_override_once;
   _Bool                 entrance_override_next;
   int32_t               next_entrance;
