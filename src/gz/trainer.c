@@ -14,6 +14,7 @@ struct roll roll;
 struct sidehop sidehop;
 struct hess hess;
 struct equip_swap equip_swap;
+struct inverted_cam inverted_cam;
 
 _Bool is_rolling()
 {
@@ -278,6 +279,26 @@ void update_equip_swap()
   equip_swap.x_prev = x;
   equip_swap.y_prev = y;
   equip_swap.pad_prev = input_pad();
+}
+
+void update_inverted_cam()
+{
+    if (!z_pressed()) {
+        if (inverted_cam.holding_target_counter > 0) {
+            inverted_cam.holding_target_duration = inverted_cam.holding_target_counter;
+            inverted_cam.holding_target_counter = 0;
+        }
+
+        inverted_cam.not_holding_target_counter++;
+    } else {
+        inverted_cam.target_frame_counter++;
+        if (inverted_cam.not_holding_target_counter > 0) {
+            inverted_cam.not_holding_target_duration = inverted_cam.not_holding_target_counter;
+            inverted_cam.not_holding_target_counter = 0;
+        }
+
+        inverted_cam.holding_target_counter++;
+    }
 }
 
 /* set color functions */

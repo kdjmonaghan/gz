@@ -168,6 +168,7 @@ struct settings_data
   uint8_t               n_watches;
   uint32_t              trainer_roll_pb;
   uint32_t              trainer_equip_swap_pb;
+  uint32_t              trainer_inverted_cam_pb;
   uint32_t              trainer_sidehop_pb;
 };
 

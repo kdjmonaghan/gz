@@ -7,8 +7,9 @@
 #include "settings.h"
 #include "z64.h"
 #include "trainer.h"
+#include "input.h"
 
-#define TRAINER_MENU_ITEM_COUNT 3
+#define TRAINER_MENU_ITEM_COUNT 4
 #define SIDEHOP_LOG_LENGTH 6
 // length of "perfect! (frame perfect)"
 #define SIDEHOP_LOG_STRING_LENGTH 25
@@ -212,6 +213,67 @@ static int equip_swap_draw_proc(struct menu_item *item,
   return 1;
 }
 
+static int inverted_cam_draw_proc(struct menu_item *item,
+                                struct menu_draw_params *draw_params)
+{
+    if (gz.menu_active)
+        return 1;
+
+    int8_t input_x = input_x();
+    int8_t input_y = input_y();
+
+    gfx_mode_set(GFX_MODE_COLOR, GPACK_RGB24A8(draw_params->color,
+                                               draw_params->alpha));
+
+    struct gfx_font *font = draw_params->font;
+    int ch = menu_get_cell_height(item->owner, 1);
+    int x = draw_params->x;
+    int y = draw_params->y;
+
+    if (gz.frame_ran) {
+        update_inverted_cam();
+    }
+
+    if (inverted_cam.holding_target_duration == 3 && inverted_cam.not_holding_target_duration == 2) {
+        inverted_cam.target_timing = 1;
+    } else if (inverted_cam.holding_target_duration == 4 && inverted_cam.not_holding_target_duration == 1) {
+        inverted_cam.target_timing = 1;
+    } else {
+        inverted_cam.target_timing = 0;
+    }
+
+    set_rgb_white();
+    gfx_printf(font, x, y + ch * 0, "best: %d", settings->trainer_inverted_cam_pb);
+    gfx_printf(font, x, y + ch * 1, "streak: %d", inverted_cam.streak);
+    gfx_printf(font, x, y + ch * 2, "held target for: %d", inverted_cam.holding_target_duration);
+    gfx_printf(font, x, y + ch * 3, "not holding target for: %d", inverted_cam.not_holding_target_duration);
+    gfx_printf(font, x, y + ch * 4, "target counter: %d", inverted_cam.holding_target_counter);
+    gfx_printf(font, x, y + ch * 5, "not target counter: %d", inverted_cam.not_holding_target_counter);
+    gfx_printf(font, x, y + ch * 6, "y position: %d", inverted_cam.y_pos);
+    gfx_printf(font, x, y + ch * 7, "x position: %d", inverted_cam.x_pos);
+
+    if (inverted_cam.target_timing) {
+        set_rgb_green();
+        inverted_cam.x_pos = abs(input_x);
+        inverted_cam.y_pos = abs(input_y);
+        gfx_printf(font, x, y + ch * 8, "target timing was good");
+        inverted_cam.streak++;
+
+        if (inverted_cam.streak > settings->trainer_inverted_cam_pb) {
+            settings->trainer_inverted_cam_pb = inverted_cam.streak;
+            settings_save(gz.profile);
+        }
+    } else {
+        set_rgb_red();
+        inverted_cam.x_pos = abs(input_x);
+        inverted_cam.y_pos = abs(input_y);
+        gfx_printf(font, x, y + ch * 8, "target timing was bad");
+        inverted_cam.streak = 0;
+    }
+
+    return 1;
+}
+
 static int trainer_radio_button_toggle_proc(struct menu_item *item,
                       enum menu_callback_reason reason,
                       void *data)
@@ -266,6 +328,13 @@ struct menu *gz_trainer_menu(void)
   trainer_menu_data[index]->enabled = 0;
   menu_add_checkbox(&menu, 0, index + 1, trainer_radio_button_toggle_proc, (void*)index);
   menu_add_static(&menu, 2, index + 1, "equip swap trainer", 0xC0C0C0);
+  index += 1;
+
+  /*add inverted cam training option*/
+  trainer_menu_data[index] = menu_add_static_custom(gz.menu_global, global_x, global_y, inverted_cam_draw_proc, NULL, 0xFFFFFF);
+  trainer_menu_data[index]->enabled = 0;
+  menu_add_checkbox(&menu, 0, index + 1, trainer_radio_button_toggle_proc, (void*)index);
+  menu_add_static(&menu, 2, index + 1, "inverted cam trainer", 0xC0C0C0);
   index += 1;
 
   return &menu;

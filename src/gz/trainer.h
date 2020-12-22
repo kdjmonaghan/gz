@@ -17,7 +17,7 @@ enum animation
   ANIM_LANDING_L   = 0x04002960,
   ANIM_SIDEHOP_R   = 0x04002988,
   ANIM_LANDING_R   = 0x04002998,
-
+  ANIM_WALKING     = 0x04003140,
 };
 
 struct roll
@@ -71,6 +71,19 @@ struct equip_swap
   _Bool     diagonal_warning;
 };
 
+struct inverted_cam
+{
+    uint8_t   streak;
+    uint8_t   target_frame_counter;
+    uint8_t   holding_target_counter;
+    uint8_t   holding_target_duration;
+    uint8_t   not_holding_target_counter;
+    uint8_t   not_holding_target_duration;
+    int8_t    x_pos;
+    int8_t    y_pos;
+    _Bool     target_timing;
+};
+
 _Bool is_rolling();
 _Bool roll_pressed();
 void update_roll();
@@ -79,6 +92,7 @@ void roll_check_streak();
 _Bool update_sidehop();
 
 void update_equip_swap();
+void update_inverted_cam();
 
 void set_rgb_green();
 void set_rgb_lgreen();
@@ -91,5 +105,6 @@ extern struct roll roll;
 extern struct sidehop sidehop;
 extern struct hess hess;
 extern struct equip_swap equip_swap;
+extern struct inverted_cam inverted_cam;
 
 #endif
