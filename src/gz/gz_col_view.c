@@ -844,12 +844,12 @@ void gz_col_view(void)
 
     poly_writer_finish(p_poly_writer, &stc_poly_p, &stc_poly_d);
     gSPEndDisplayList(stc_poly_p++);
-    cache_writeback_data(stc_poly, sizeof(*stc_poly) * stc_poly_cap);
+    dcache_wb(stc_poly, sizeof(*stc_poly) * stc_poly_cap);
 
     if (col_view_line) {
       line_writer_finish(p_line_writer, &stc_line_p, &stc_line_d);
       gSPEndDisplayList(stc_line_p++);
-      cache_writeback_data(stc_line, sizeof(*stc_line) * stc_line_cap);
+      dcache_wb(stc_line, sizeof(*stc_line) * stc_line_cap);
       vector_destroy(&line_set);
     }
 
@@ -889,12 +889,12 @@ void gz_col_view(void)
 
     poly_writer_finish(p_poly_writer, &dyn_poly_p, &dyn_poly_d);
     gSPEndDisplayList(dyn_poly_p++);
-    cache_writeback_data(dyn_poly, sizeof(*dyn_poly) * dyn_poly_cap);
+    dcache_wb(dyn_poly, sizeof(*dyn_poly) * dyn_poly_cap);
 
     if (col_view_line) {
       line_writer_finish(p_line_writer, &dyn_line_p, &dyn_line_d);
       gSPEndDisplayList(dyn_line_p++);
-      cache_writeback_data(dyn_line, sizeof(*dyn_line) * dyn_line_cap);
+      dcache_wb(dyn_line, sizeof(*dyn_line) * dyn_line_cap);
     }
   }
 
@@ -1045,7 +1045,7 @@ void gz_hit_view(void)
                      z64_game.hit_ctxt.n_at, z64_game.hit_ctxt.at_list, 0xFF0000);
 
     gSPEndDisplayList(hit_gfx_p++);
-    cache_writeback_data(hit_gfx, sizeof(*hit_gfx) * hit_gfx_cap);
+    dcache_wb(hit_gfx, sizeof(*hit_gfx) * hit_gfx_cap);
 
     gSPDisplayList((*p_gfx_p)++, hit_gfx);
   }
@@ -1258,13 +1258,13 @@ void gz_cull_view(void)
         gSPEndDisplayList(cull_gfx_p++);
         cache_writeback_data(cull_gfx, sizeof(*cull_gfx) * cull_gfx_cap);
 
-        gSPDisplayList((*p_gfx_p)++, cull_gfx);
-    }
-    if (gz.cull_view_state == CULLVIEW_BEGIN_STOP)
-        gz.cull_view_state = CULLVIEW_STOP;
-    else if (gz.cull_view_state == CULLVIEW_STOP) {
-        release_mem(&cull_gfx_buf[0]);
-        release_mem(&cull_gfx_buf[1]);
+    gSPDisplayList((*p_gfx_p)++, cull_gfx);
+  }
+  if (gz.cull_view_state == CULLVIEW_BEGIN_STOP)
+    gz.cull_view_state = CULLVIEW_STOP;
+  else if (gz.cull_view_state == CULLVIEW_STOP) {
+    release_mem(&cull_gfx_buf[0]);
+    release_mem(&cull_gfx_buf[1]);
 
         gz.cull_view_state = CULLVIEW_INACTIVE;
     }
