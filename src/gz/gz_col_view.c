@@ -1256,7 +1256,7 @@ void gz_cull_view(void)
         draw_quad(&cull_gfx_p, &cull_gfx_d, &C[0], &C[1], &C[2], &C[3]);
 
         gSPEndDisplayList(cull_gfx_p++);
-        cache_writeback_data(cull_gfx, sizeof(*cull_gfx) * cull_gfx_cap);
+        dcache_wb(cull_gfx, sizeof(*cull_gfx) * cull_gfx_cap);
 
     gSPDisplayList((*p_gfx_p)++, cull_gfx);
   }
@@ -1316,7 +1316,7 @@ void gz_guard_view(void){
 
         gSPEndDisplayList(guard_gfx_p++);
 
-        cache_writeback_data(guard_gfx, sizeof(*guard_gfx) * guard_view_cap);
+        dcache_wb(guard_gfx, sizeof(*guard_gfx) * guard_view_cap);
 
         gSPDisplayList((*p_gfx_p)++, guard_gfx);
     }
@@ -1429,7 +1429,7 @@ void gz_water_view(void)
     }
 
     gSPEndDisplayList(water_gfx_p++);
-    cache_writeback_data(water_gfx, sizeof(*water_gfx) * water_gfx_cap);
+    dcache_wb(water_gfx, sizeof(*water_gfx) * water_gfx_cap);
 
     gSPDisplayList((*p_gfx_p)++, water_gfx);
   }
@@ -1503,7 +1503,7 @@ void gz_path_view(void)
 
     do_path_list(&path_gfx_p, &path_gfx_d, z64_game.path_list);
     gSPEndDisplayList(path_gfx_p++);
-    cache_writeback_data(path_gfx, sizeof(*path_gfx) * path_gfx_cap);
+    dcache_wb(path_gfx, sizeof(*path_gfx) * path_gfx_cap);
 
     gSPDisplayList((*p_gfx_p)++, path_gfx);
   }
