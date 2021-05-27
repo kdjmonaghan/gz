@@ -637,7 +637,7 @@ struct menu *gz_scene_menu(void)
   menu_add_static(&collision, 2, 2, "polygon class", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 2, col_view_wfc_proc, NULL);
   menu_add_static(&collision, 32, 2, "auto update", 0xC0C0C0);
-    menu_add_checkbox(&collision, 42, 2 col_view_upd_proc, NULL);
+  menu_add_checkbox(&collision, 42, 2, col_view_upd_proc, NULL);
   menu_add_static(&collision, 2, 3, "mode", 0xC0C0C0);
   menu_add_option(&collision, 16, 3, "decal\0""surface\0",
                   col_view_mode_proc, NULL);
@@ -647,7 +647,7 @@ struct menu *gz_scene_menu(void)
   menu_add_checkbox(&collision, 32, 4, col_view_line_proc, NULL);
   menu_add_static(&collision, 2, 5, "shaded", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 5, col_view_shade_proc, NULL);
-  menu_add_static(&collision, 19, 5 "reduced", 0xC0C0C0);
+  menu_add_static(&collision, 19, 5, "reduced", 0xC0C0C0);
   menu_add_checkbox(&collision, 32, 5, col_view_rd_proc, NULL);
   /* hitbox view controls */
   menu_add_static(&collision, 0, 7, "hitboxes", 0xC0C0C0);
