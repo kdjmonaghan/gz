@@ -208,6 +208,21 @@ static int col_view_xlu_proc(struct menu_item *item,
   return 0;
 }
 
+static int col_view_wfc_proc(struct menu_item *item,
+                             enum menu_callback_reason reason,
+                             void *data)
+{
+  if (reason == MENU_CALLBACK_SWITCH_ON) {
+    settings->bits.col_view_wfc = 1;
+    gz.col_view_state = COLVIEW_RESTART;
+  } else if (reason == MENU_CALLBACK_SWITCH_OFF) {
+    settings->bits.col_view_wfc = 0;
+    gz.col_view_state = COLVIEW_RESTART;
+  } else if (reason == MENU_CALLBACK_THINK)
+    menu_checkbox_set(item, settings->bits.col_view_wfc);
+  return 0;
+}
+
 static int col_view_line_proc(struct menu_item *item,
                               enum menu_callback_reason reason,
                               void *data)
@@ -619,8 +634,10 @@ struct menu *gz_scene_menu(void)
   /* collision view controls */
   menu_add_static(&collision, 0, 1, "collision", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 1, col_view_proc, NULL);
-  menu_add_static(&collision, 2, 2, "auto update", 0xC0C0C0);
-  menu_add_checkbox(&collision, 16, 2, col_view_upd_proc, NULL);
+  menu_add_static(&collision, 2, 2, "polygon class", 0xC0C0C0);
+  menu_add_checkbox(&collision, 16, 2, col_view_wfc_proc, NULL);
+  menu_add_static(&collision, 32, 2, "auto update", 0xC0C0C0);
+    menu_add_checkbox(&collision, 42, 2 col_view_upd_proc, NULL);
   menu_add_static(&collision, 2, 3, "mode", 0xC0C0C0);
   menu_add_option(&collision, 16, 3, "decal\0""surface\0",
                   col_view_mode_proc, NULL);
@@ -630,7 +647,7 @@ struct menu *gz_scene_menu(void)
   menu_add_checkbox(&collision, 32, 4, col_view_line_proc, NULL);
   menu_add_static(&collision, 2, 5, "shaded", 0xC0C0C0);
   menu_add_checkbox(&collision, 16, 5, col_view_shade_proc, NULL);
-  menu_add_static(&collision, 19, 5, "reduced", 0xC0C0C0);
+  menu_add_static(&collision, 19, 5 "reduced", 0xC0C0C0);
   menu_add_checkbox(&collision, 32, 5, col_view_rd_proc, NULL);
   /* hitbox view controls */
   menu_add_static(&collision, 0, 7, "hitboxes", 0xC0C0C0);
